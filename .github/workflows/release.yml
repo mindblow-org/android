@@ -66,6 +66,6 @@ jobs:
           cat > notes.md <<'EOF'
           Baixe o `mindblow-android.apk` no celular e instale (o Android pede para liberar a instalação pelo navegador na primeira vez). Para conectar, abra o mindblow em outro aparelho, toque no QR do canto de cima e leia o código no app.
 
-          Atalhos, widget, abrir a nota compartilhada e o botão voltar dependem de um [mindblow](https://github.com/mindblow-org/mindblow) com os ganchos do app (`#new=`, `#open=` e `mindblowBack`).
+          Atalhos, widget, abrir a nota compartilhada e o botão voltar dependem de um [mindblow](https://github.com/mindblow-org/desktop) com os ganchos do app (`#new=`, `#open=` e `mindblowBack`).
           EOF
           gh release create "$TAG" mindblow-android.apk --target "$GITHUB_SHA" --title "mindblow android $TAG" --notes-file notes.md --generate-notes --latest

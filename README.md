@@ -4,7 +4,7 @@
 
 <h1 align="center">mindblow para Android</h1>
 
-<p align="center">O <a href="https://github.com/mindblow-org/mindblow">mindblow</a> no celular, como app: tela cheia, atalhos, widget e "compartilhar".</p>
+<p align="center">O <a href="https://github.com/mindblow-org/desktop">mindblow</a> no celular, como app: tela cheia, atalhos, widget e "compartilhar".</p>
 
 <p align="center"><a href="https://mindblow-org.github.io/site/">Site</a> · <a href="https://github.com/mindblow-org/android/releases/latest/download/mindblow-android.apk">Baixar o APK</a></p>
 
