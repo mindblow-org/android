@@ -22,6 +22,9 @@ import android.widget.TextView
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
+import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
+import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
+import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 import kotlin.concurrent.thread
 import org.json.JSONTokener
 
@@ -34,6 +37,8 @@ class Main : Activity() {
         const val KIND = "kind"
         const val NOTE = "note"
         private const val PICK = 1
+        private const val SHEET = 2
+        private const val PAGES = 10
         private const val TOKEN =
             "(() => { try { return JSON.parse(localStorage.getItem('mindblow.token')) || '' } catch (e) { return '' } })()"
     }
@@ -95,6 +100,12 @@ class Main : Activity() {
 
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(code: Int, result: Int, data: Intent?) {
+        if (code == SHEET) {
+            val pages = GmsDocumentScanningResult.fromActivityResultIntent(data)?.pages.orEmpty()
+            files?.onReceiveValue(if (result == RESULT_OK) pages.map { it.imageUri }.toTypedArray() else null)
+            files = null
+            return
+        }
         if (code != PICK) return super.onActivityResult(code, result, data)
         val clip = data?.clipData
         val uris = if (result == RESULT_OK && clip != null) {
@@ -165,17 +176,45 @@ class Main : Activity() {
             ): Boolean {
                 files?.onReceiveValue(null)
                 files = cb
-                val i = p.createIntent()
-                if (p.mode == FileChooserParams.MODE_OPEN_MULTIPLE) i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
-                return runCatching {
-                    @Suppress("DEPRECATION")
-                    startActivityForResult(i, PICK)
-                }.onFailure {
-                    files = null
-                    cb.onReceiveValue(null)
-                }.isSuccess
+                if (p.isCaptureEnabled) sheets(p) else pick(p)
+                return true
             }
         }
+    }
+
+    private fun pick(p: WebChromeClient.FileChooserParams) {
+        val i = p.createIntent()
+        if (p.mode == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE) i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+        runCatching {
+            @Suppress("DEPRECATION")
+            startActivityForResult(i, PICK)
+        }.onFailure {
+            files?.onReceiveValue(null)
+            files = null
+        }
+    }
+
+    /**
+     * O "escanear caderno" da interface pede câmera (capture). Abre o scanner de documento do
+     * Google Play Services, que acha a folha, corta, endireita e aceita várias páginas.
+     * Sem ele, cai no seletor de arquivo.
+     */
+    private fun sheets(p: WebChromeClient.FileChooserParams) {
+        val opts = GmsDocumentScannerOptions.Builder()
+            .setGalleryImportAllowed(true)
+            .setPageLimit(PAGES)
+            .setResultFormats(GmsDocumentScannerOptions.RESULT_FORMAT_JPEG)
+            .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_FULL)
+            .build()
+        GmsDocumentScanning.getClient(opts)
+            .getStartScanIntent(this)
+            .addOnSuccessListener { s ->
+                runCatching {
+                    @Suppress("DEPRECATION")
+                    startIntentSenderForResult(s, SHEET, null, 0, 0, 0)
+                }.onFailure { pick(p) }
+            }
+            .addOnFailureListener { pick(p) }
     }
 
     /** Guarda o token que a interface usa, para o compartilhar falar com a API. */
