@@ -42,6 +42,39 @@ jobs:
           java-version: 17
           cache: gradle
 
+      # O servidor que vai dentro do app (libmindblow.so) vem do repo do desktop.
+      # MINDBLOW_REF (variável do repositório) escolhe a versão; sem ela, a main.
+      - uses: actions/checkout@v7
+        with:
+          repository: mindblow-org/desktop
+          ref: ${{ vars.MINDBLOW_REF || 'main' }}
+          path: desktop
+
+      - uses: pnpm/action-setup@v6.1.0
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: desktop/web/pnpm-lock.yaml
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,x86_64-linux-android
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop
+
+      - name: cargo-ndk e NDK
+        run: |
+          cargo install cargo-ndk --locked
+          ndk=$(sed -n 's/^ *ndkVersion = "\(.*\)"/\1/p' app/build.gradle.kts)
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$ndk" > /dev/null
+          echo "MINDBLOW_SRC=$GITHUB_WORKSPACE/desktop" >> "$GITHUB_ENV"
+
       - name: chave de assinatura
         env:
           KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
@@ -64,8 +97,8 @@ jobs:
         run: |
           cp app/build/outputs/apk/release/app-release.apk mindblow-android.apk
           cat > notes.md <<'EOF'
-          Baixe o `mindblow-android.apk` no celular e instale (o Android pede para liberar a instalação pelo navegador na primeira vez). Para conectar, abra o mindblow em outro aparelho, toque no QR do canto de cima e leia o código no app.
+          Baixe o `mindblow-android.apk` no celular e instale (o Android pede para liberar a instalação pelo navegador na primeira vez). O app guarda as notas no próprio celular e funciona sem internet. Para sincronizar com outro aparelho, toque no QR do canto de cima, em "ler QR", e leia o QR do mindblow do PC.
 
-          Atalhos, widget, abrir a nota compartilhada e o botão voltar dependem de um [mindblow](https://github.com/mindblow-org/desktop) com os ganchos do app (`#new=`, `#open=` e `mindblowBack`).
+          O sync precisa de um [mindblow](https://github.com/mindblow-org/desktop) com sync do outro lado; um servidor mais antigo aparece como "mindblow sem sync".
           EOF
           gh release create "$TAG" mindblow-android.apk --target "$GITHUB_SHA" --title "mindblow android $TAG" --notes-file notes.md --generate-notes --latest
