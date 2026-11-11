@@ -2,22 +2,13 @@
 <resources>
     <string name="app">mindblow</string>
 
-    <string name="setup_hint">Abra o mindblow em outro aparelho, toque no QR do canto de cima e leia o código aqui.</string>
-    <string name="scan">Ler QR</string>
-    <string name="field">ou cole o link</string>
-    <string name="go">Conectar</string>
-    <string name="looking">Procurando o mindblow…</string>
-    <string name="bad_link">Esse link não parece um endereço do mindblow.</string>
-    <string name="unreachable">Não achei o mindblow nesse link. O Tailscale está ligado neste aparelho?</string>
-    <string name="no_scanner">Não deu para abrir o leitor de QR. Cole o link abaixo.</string>
+    <string name="no_scanner">Não deu para abrir o leitor de QR. Cole o link no campo.</string>
 
-    <string name="down">Sem conexão com o mindblow</string>
-    <string name="down_hint">Confira se o Tailscale está ligado neste aparelho e se o servidor está no ar.</string>
+    <string name="down">O mindblow não abriu</string>
+    <string name="down_hint">As notas ficam neste aparelho, mas o servidor dele não subiu. Feche o app e abra de novo; se continuar, reinstale.</string>
     <string name="retry">Tentar de novo</string>
-    <string name="change">Trocar link</string>
 
     <string name="saving">Salvando no mindblow…</string>
-    <string name="locked">O mindblow pediu o token. Abra o app uma vez e entre.</string>
     <string name="failed">Não deu para salvar: %1$s</string>
     <string name="empty">Nada para salvar.</string>
 

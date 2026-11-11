@@ -12,7 +12,7 @@ import org.json.JSONObject
 /**
  * "Compartilhar" de outros apps. Texto curto vira sticky; com assunto (o título da
  * página, vindo do navegador), mais de 500 caracteres ou várias imagens, vira texto.
- * Salva pela API e abre a nota no app.
+ * Salva no servidor daqui, então funciona sem rede, e abre a nota no app.
  */
 class Share : Activity() {
     companion object {
@@ -22,10 +22,6 @@ class Share : Activity() {
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
-        if (Server.link(this) == null) {
-            startActivity(Intent(this, Main::class.java))
-            return finish()
-        }
         val text = intent.getStringExtra(Intent.EXTRA_TEXT)?.trim().orEmpty()
         val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT)?.trim().orEmpty()
         val pics = pics()
@@ -40,7 +36,7 @@ class Share : Activity() {
                 r.onSuccess { id ->
                     startActivity(Intent(this, Main::class.java).putExtra(Main.NOTE, id).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 }.onFailure { e ->
-                    toast(if (e is Locked) getString(R.string.locked) else getString(R.string.failed, e.message))
+                    toast(getString(R.string.failed, e.message))
                 }
                 finish()
             }

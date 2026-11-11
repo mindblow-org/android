@@ -1,44 +1,16 @@
 package app.mindblow.android
 
 import android.content.Context
+import android.net.Uri
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import org.json.JSONObject
 
-class Locked : IOException("token inválido")
-
-/** O servidor do mindblow: o link guardado no aparelho e as rotas que o app chama direto. */
+/** As rotas do servidor daqui (o `Node`) que o app chama direto. */
 object Server {
     private const val LINK = "link"
     private const val TOKEN = "token"
-
-    private fun prefs(c: Context) = c.getSharedPreferences("mindblow", Context.MODE_PRIVATE)
-
-    fun link(c: Context): String? = prefs(c).getString(LINK, null)
-
-    fun token(c: Context): String = prefs(c).getString(TOKEN, null).orEmpty()
-
-    fun keep(c: Context, token: String) = prefs(c).edit().putString(TOKEN, token).apply()
-
-    /** Troca de servidor esquece o token do anterior, a não ser que venha um novo junto. */
-    fun save(c: Context, link: String, token: String?) {
-        val same = link == link(c)
-        prefs(c).edit()
-            .putString(LINK, link)
-            .putString(TOKEN, token ?: if (same) token(c) else "")
-            .apply()
-    }
-
-    /** Responde se o link é um mindblow. 401 conta: a interface pede o token. */
-    fun reach(link: String, token: String): Boolean = runCatching {
-        val r = open("$link/api/health", "GET", token)
-        when (r.responseCode) {
-            HttpURLConnection.HTTP_OK -> JSONObject(text(r)).optBoolean("ok")
-            HttpURLConnection.HTTP_UNAUTHORIZED -> true
-            else -> false
-        }
-    }.getOrDefault(false)
 
     fun add(c: Context, draft: JSONObject): JSONObject =
         call(c, "POST", "/api/notes", draft.toString().toByteArray(), "application/json")
@@ -46,28 +18,38 @@ object Server {
     fun attach(c: Context, id: String, p: Pic): JSONObject =
         call(c, "POST", "/api/notes/$id/images?w=${p.w}&h=${p.h}", p.bytes, p.mime)
 
-    private fun call(c: Context, method: String, path: String, body: ByteArray, type: String): JSONObject {
-        val link = link(c) ?: throw IOException("sem servidor")
-        val r = open(link + path, method, token(c))
-        r.doOutput = true
-        r.setRequestProperty("Content-Type", type)
-        r.setFixedLengthStreamingMode(body.size)
-        r.outputStream.use { it.write(body) }
-        val code = r.responseCode
-        val out = text(r)
-        if (code == HttpURLConnection.HTTP_UNAUTHORIZED) throw Locked()
-        if (code >= 400) throw IOException(runCatching { JSONObject(out).getString("error") }.getOrDefault("HTTP $code"))
-        return JSONObject(out)
+    /** Passa a sincronizar com outro mindblow (o link do QR dele, com ou sem `#token=`). */
+    fun link(c: Context, url: String) {
+        call(c, "POST", "/api/links", JSONObject().put("url", url).toString().toByteArray(), "application/json")
     }
 
-    private fun open(url: String, method: String, token: String): HttpURLConnection =
-        (URL(url).openConnection() as HttpURLConnection).apply {
+    /**
+     * Antes o app só abria o mindblow do PC, pelo link guardado aqui. Na primeira vez com o
+     * servidor junto, esse link vira o sync com o PC, e as notas de lá descem para cá.
+     */
+    fun adopt(c: Context) {
+        val p = c.getSharedPreferences("mindblow", Context.MODE_PRIVATE)
+        val link = p.getString(LINK, null) ?: return
+        val token = p.getString(TOKEN, null).orEmpty()
+        val url = if (token.isEmpty()) link else "$link/#token=${Uri.encode(token)}"
+        runCatching { link(c, url) }.onSuccess { p.edit().remove(LINK).remove(TOKEN).apply() }
+    }
+
+    private fun call(c: Context, method: String, path: String, body: ByteArray, type: String): JSONObject {
+        if (!Node.up(c)) throw IOException("o mindblow não abriu")
+        val r = (URL(Node.BASE + path).openConnection() as HttpURLConnection).apply {
             requestMethod = method
             connectTimeout = 8_000
             readTimeout = 60_000
-            if (token.isNotEmpty()) setRequestProperty("Authorization", "Bearer $token")
+            doOutput = true
+            setRequestProperty("Authorization", "Bearer ${Node.token(c)}")
+            setRequestProperty("Content-Type", type)
+            setFixedLengthStreamingMode(body.size)
         }
-
-    private fun text(r: HttpURLConnection): String =
-        (if (r.responseCode < 400) r.inputStream else r.errorStream)?.bufferedReader()?.use { it.readText() }.orEmpty()
+        r.outputStream.use { it.write(body) }
+        val code = r.responseCode
+        val out = (if (code < 400) r.inputStream else r.errorStream)?.bufferedReader()?.use { it.readText() }.orEmpty()
+        if (code >= 400) throw IOException(runCatching { JSONObject(out).getString("error") }.getOrDefault("HTTP $code"))
+        return runCatching { JSONObject(out) }.getOrDefault(JSONObject())
+    }
 }
