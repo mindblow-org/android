@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Os atalhos do main apontam para o pacote do app normal; na versão de teste, sem atalhos. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android" />
