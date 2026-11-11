@@ -8,7 +8,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.WindowInsets
-import android.view.inputmethod.EditorInfo
+import android.webkit.JavascriptInterface
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -17,79 +17,51 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.EditText
-import android.widget.TextView
+import android.widget.Toast
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import kotlin.concurrent.thread
-import org.json.JSONTokener
+import org.json.JSONObject
 
 /**
- * Uma WebView com a interface que o próprio servidor entrega, como o app desktop.
- * Por fora dela, só a tela de conectar (QR ou link) e a de sem conexão.
+ * Uma WebView com a interface que o servidor daqui (o `Node`) entrega, como o app
+ * desktop. As notas moram no aparelho; sincronizar com outro mindblow é opcional e se
+ * liga pela própria interface (QR do canto de cima).
  */
 class Main : Activity() {
     companion object {
         const val KIND = "kind"
         const val NOTE = "note"
         private const val PICK = 1
-        private const val TOKEN =
-            "(() => { try { return JSON.parse(localStorage.getItem('mindblow.token')) || '' } catch (e) { return '' } })()"
     }
 
     private lateinit var web: WebView
-    private lateinit var setup: View
     private lateinit var down: View
-    private lateinit var field: EditText
-    private lateinit var note: TextView
     private var files: ValueCallback<Array<Uri>>? = null
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
         setContentView(R.layout.main)
         web = findViewById(R.id.web)
-        setup = findViewById(R.id.setup)
         down = findViewById(R.id.down)
-        field = findViewById(R.id.field)
-        note = findViewById(R.id.note)
         edge(findViewById(R.id.root))
         prepare()
-
-        findViewById<View>(R.id.scan).setOnClickListener { scan() }
-        findViewById<View>(R.id.go).setOnClickListener { connect(field.text.toString()) }
-        field.setOnEditorActionListener { _, action, _ ->
-            (action == EditorInfo.IME_ACTION_GO).also { if (it) connect(field.text.toString()) }
-        }
         findViewById<View>(R.id.retry).setOnClickListener { open(null) }
-        findViewById<View>(R.id.change).setOnClickListener {
-            field.setText(Server.link(this))
-            show(setup)
-        }
-
-        if (Server.link(this) == null) show(setup) else open(if (state == null) hash(intent) else null)
+        open(if (state == null) hash(intent) else null)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        val h = hash(intent) ?: return
-        if (Server.link(this) != null) open(h)
-    }
-
-    override fun onPause() {
-        super.onPause()
-        keep()
+        hash(intent)?.let(::open)
     }
 
     @Deprecated("Deprecated in Java")
     @Suppress("DEPRECATION")
     override fun onBackPressed() {
-        when {
-            setup.isShown && Server.link(this) != null -> open(null)
-            !web.isShown -> super.onBackPressed()
-            else -> web.evaluateJavascript("window.mindblowBack?.() === true") {
-                if (it != "true") super.onBackPressed()
-            }
+        if (!web.isShown) return super.onBackPressed()
+        web.evaluateJavascript("window.mindblowBack?.() === true") {
+            if (it != "true") super.onBackPressed()
         }
     }
 
@@ -109,21 +81,29 @@ class Main : Activity() {
     /** O atalho, o widget e o compartilhar chegam como extra; a interface entende pelo hash. */
     private fun hash(i: Intent?): String? {
         if (i == null || i.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return null
-        val h = i.getStringExtra(NOTE)?.let { "#open=${Uri.encode(it)}" }
-            ?: i.getStringExtra(KIND)?.let { "#new=${Uri.encode(it)}" }
+        val h = i.getStringExtra(NOTE)?.let { "open=${Uri.encode(it)}" }
+            ?: i.getStringExtra(KIND)?.let { "new=${Uri.encode(it)}" }
         i.removeExtra(NOTE)
         i.removeExtra(KIND)
         return h
     }
 
+    /** Sobe o servidor (fora da thread da tela: abre o banco) e carrega a interface com o token dele. */
     private fun open(hash: String?) {
-        val link = Server.link(this) ?: return show(setup)
-        show(web)
-        web.loadUrl("$link/${hash.orEmpty()}")
+        thread {
+            val up = Node.up(this)
+            if (up) Server.adopt(this)
+            runOnUiThread {
+                if (!up) return@runOnUiThread show(down)
+                show(web)
+                val t = Uri.encode(Node.token(this))
+                web.loadUrl("${Node.BASE}/#token=$t" + hash?.let { "&$it" }.orEmpty())
+            }
+        }
     }
 
     private fun show(v: View) {
-        for (x in listOf(web, setup, down)) x.visibility = if (x == v) View.VISIBLE else View.GONE
+        for (x in listOf(web, down)) x.visibility = if (x == v) View.VISIBLE else View.GONE
     }
 
     private fun prepare() {
@@ -133,10 +113,10 @@ class Main : Activity() {
             domStorageEnabled = true
             userAgentString = "$userAgentString mindblow-android/${BuildConfig.VERSION_NAME}"
         }
+        web.addJavascriptInterface(Bridge(), "mindblowAndroid")
         web.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(v: WebView, r: WebResourceRequest): Boolean {
-                val home = Uri.parse(Server.link(this@Main) ?: return false)
-                if (r.url.host == home.host && r.url.port == home.port) return false
+                if (r.url.host == "127.0.0.1" && r.url.port == Node.PORT) return false
                 runCatching { startActivity(Intent(Intent.ACTION_VIEW, r.url)) }
                 return true
             }
@@ -148,8 +128,6 @@ class Main : Activity() {
             override fun onReceivedHttpError(v: WebView, r: WebResourceRequest, e: WebResourceResponse) {
                 if (r.isForMainFrame && e.statusCode >= 500) show(down)
             }
-
-            override fun onPageFinished(v: WebView, url: String) = keep()
 
             // O sistema matou o renderer (falta de memória): refaz a tela em vez de derrubar o app.
             override fun onRenderProcessGone(v: WebView, d: RenderProcessGoneDetail): Boolean {
@@ -178,57 +156,21 @@ class Main : Activity() {
         }
     }
 
-    /** Guarda o token que a interface usa, para o compartilhar falar com a API. */
-    private fun keep() {
-        if (!web.isShown) return
-        web.evaluateJavascript(TOKEN) { v ->
-            val t = runCatching { JSONTokener(v).nextValue() as? String }.getOrNull() ?: return@evaluateJavascript
-            Server.keep(this, t)
-        }
+    /** O que a interface pede ao app (window.mindblowAndroid). */
+    private inner class Bridge {
+        /** Lê o QR de outro mindblow; o link volta para a interface, que liga o sync. */
+        @JavascriptInterface
+        fun scan() = runOnUiThread(::scan)
     }
 
     private fun scan() {
         val opts = GmsBarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).build()
         GmsBarcodeScanning.getClient(this, opts)
             .startScan()
-            .addOnSuccessListener { b -> b.rawValue?.let(::connect) }
-            .addOnFailureListener { say(R.string.no_scanner) }
-    }
-
-    /** Aceita o link do QR (com ou sem #token=) ou um endereço digitado; sem esquema, tenta https e depois http. */
-    private fun connect(raw: String) {
-        val s = raw.trim().ifEmpty { return }
-        val tries = (if ("://" in s) listOf(s) else listOf("https://$s", "http://$s")).map(Uri::parse)
-        val u = tries.first()
-        if (u.scheme !in setOf("http", "https") || u.host.isNullOrEmpty()) return say(R.string.bad_link)
-        val token = Regex("(?:^|&)token=([^&]*)").find(u.encodedFragment.orEmpty())?.groupValues?.get(1)?.let(Uri::decode)
-        busy(true)
-        thread {
-            val hit = tries.map(::origin).firstOrNull { Server.reach(it, token ?: saved(it)) }
-            runOnUiThread {
-                busy(false)
-                if (hit == null) return@runOnUiThread say(R.string.unreachable)
-                Server.save(this, hit, token)
-                show(web)
-                web.loadUrl("$hit/" + (u.encodedFragment?.let { "#$it" } ?: ""))
+            .addOnSuccessListener { b ->
+                b.rawValue?.let { web.evaluateJavascript("window.mindblowLink?.(${JSONObject.quote(it)})", null) }
             }
-        }
-    }
-
-    private fun origin(u: Uri) = "${u.scheme}://${u.encodedAuthority}"
-
-    private fun saved(link: String) = Server.token(this).takeIf { link == Server.link(this) }.orEmpty()
-
-    private fun busy(on: Boolean) {
-        for (id in listOf(R.id.scan, R.id.go)) findViewById<View>(id).isEnabled = !on
-        field.isEnabled = !on
-        note.setTextColor(getColor(R.color.muted))
-        note.text = if (on) getString(R.string.looking) else ""
-    }
-
-    private fun say(msg: Int) {
-        note.setTextColor(getColor(R.color.tone_1))
-        note.setText(msg)
+            .addOnFailureListener { Toast.makeText(this, R.string.no_scanner, Toast.LENGTH_SHORT).show() }
     }
 
     /** A partir do Android 11 desenha por baixo das barras e põe o recuo à mão, teclado incluso. */

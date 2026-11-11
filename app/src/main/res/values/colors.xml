@@ -3,14 +3,11 @@
 <resources>
     <color name="bg">#f2f2f0</color>
     <color name="paper">#ffffff</color>
-    <color name="line">#e1e1dd</color>
-    <color name="line_strong">#c9c9c4</color>
     <color name="fg">#151515</color>
     <color name="muted">#76766f</color>
     <color name="faint">#a8a8a2</color>
     <color name="ink">#151515</color>
     <color name="on_ink">#fafafa</color>
-    <color name="tone_1">#d6403f</color>
 
     <color name="icon_bg">#151515</color>
     <color name="icon_fg">#fafafa</color>

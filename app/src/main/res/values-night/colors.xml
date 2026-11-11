@@ -2,12 +2,9 @@
 <resources>
     <color name="bg">#0e0e0e</color>
     <color name="paper">#181818</color>
-    <color name="line">#252525</color>
-    <color name="line_strong">#363636</color>
     <color name="fg">#ededeb</color>
     <color name="muted">#8a8a85</color>
     <color name="faint">#5c5c58</color>
     <color name="ink">#ededeb</color>
     <color name="on_ink">#111111</color>
-    <color name="tone_1">#ff6f6b</color>
 </resources>
