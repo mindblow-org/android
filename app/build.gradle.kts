@@ -48,6 +48,13 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
             signingConfig = signingConfigs.getByName(if (keystore != null) "release" else "debug")
         }
+        // Teste do servidor junto e do sync: instala ao lado do app normal, como "mindblow offline".
+        create("offline") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".offline"
+            versionNameSuffix = "-offline"
+            matchingFallbacks += "release"
+        }
     }
 
     buildFeatures {
