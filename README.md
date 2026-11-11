@@ -15,6 +15,7 @@ O app leva o mindblow inteiro junto: o mesmo servidor do desktop, compilado para
 
 - **Sync com outros aparelhos** (opcional): toque no QR do canto de cima, em "ler QR", e leia o QR do mindblow do PC (ou cole o link). Daí em diante, o que muda aqui vai para lá e o que muda lá vem para cá, sempre que o outro aparelho responder. Sem rede, as mudanças esperam.
 - **Compartilhar**: texto e imagens de outros apps viram nota. Texto curto vira sticky; com assunto (o título da página, no navegador), mais de 500 caracteres ou várias imagens, vira texto. As imagens são reduzidas como na web: lado maior de até 2048px, em WebP.
+- **Escanear caderno**: o "Escanear caderno" do mindblow abre o scanner de documento do Google, que acha a folha, corta, endireita e aceita até 10 páginas. As páginas viram um board.
 - **Atalhos**: segure o ícone para criar uma sticky, um texto, um todo ou um board.
 - **Widget**: uma barra na tela inicial com o logo, que abre o app, e um botão para cada tipo de nota.
 - **Voltar**: fecha o que estiver aberto (nota, busca, seletor, imagem) antes de sair do app.
@@ -32,7 +33,7 @@ O leitor de QR é o do Google Play Services, que não pede permissão de câmera
 ```
 app/src/main/java/app/mindblow/android/
   Node.kt     sobe o servidor (libmindblow.so) com o banco do app
-  Main.kt     WebView, tela de erro, voltar, escolher arquivo, ler QR
+  Main.kt     WebView, tela de erro, voltar, escolher arquivo, scanner de documento, ler QR
   Share.kt    recebe o "compartilhar" e salva no servidor daqui
   Pic.kt      reduz a imagem antes de enviar (igual a web/src/lib/images/shrink.ts)
   Server.kt   chamadas à API do servidor daqui
@@ -44,11 +45,12 @@ app/src/main/java/app/mindblow/android/
 - `127.0.0.1` é o mesmo para todos os apps do celular, então a API exige um token aleatório, criado na instalação. A WebView entra com ele no `#token=` do link, e o compartilhar usa o mesmo.
 - O sync é do servidor: ele puxa e empurra as mudanças de cada link e troca as imagens que faltam. Mudança aqui ou lá acorda o sync; sem resposta, ele tenta de novo com espera crescente. Enquanto o app está vivo, o sync roda; fechado, ele recomeça na próxima vez que o app abrir.
 - A interface pede para ler um QR por `window.mindblowAndroid.scan()`, e o app devolve o link em `window.mindblowLink(url)`. O leitor é o do Google Play Services, que não pede permissão de câmera.
+- Quando a página pede câmera (`<input capture>`), o `Main` abre o scanner de documento em vez do seletor de arquivo e devolve as páginas como arquivos. Sem o Google Play Services, cai no seletor.
 - Atalhos, widget e compartilhar chegam ao `Main` como extra e viram hash na URL: `#new=<tipo>` cria e abre uma nota, `#open=<id>` abre uma. Quem trata é a interface (`web/src/view/Main.svelte` no mindblow).
 - O botão voltar chama `window.mindblowBack()`, que faz o papel do Esc e responde se havia algo para fechar. Se não havia, o app vai para segundo plano.
 - O app se apresenta com `mindblow-android/<versão>` no user agent, e a lista de dispositivos mostra "App Android".
 - Do Android 11 em diante, o app desenha por baixo das barras do sistema e põe o recuo à mão, contando o teclado.
-- Sem AndroidX nem Compose: `Activity`, `WebView` e `HttpURLConnection` do próprio Android. A única dependência Java é o leitor de QR.
+- Sem AndroidX nem Compose: `Activity`, `WebView` e `HttpURLConnection` do próprio Android. As dependências Java são o leitor de QR e o scanner de documento, os dois do Google Play Services (o trabalho pesado mora no Play Services, não no APK). O que pesa no APK é a `libmindblow.so`, uma por ABI.
 
 ## Desenvolver
 
@@ -98,6 +100,16 @@ Se a versão já foi publicada, o workflow para e avisa. A assinatura usa quatro
 | `ANDROID_KEY_PASSWORD` | senha da chave |
 
 Guarde o keystore fora do repositório: sem ele, um APK novo não instala por cima do antigo. Localmente, sem `MINDBLOW_KEYSTORE`, o `assembleRelease` assina com a chave de debug, só para testar.
+
+### Versão de teste
+
+Cada push numa branch de trabalho (qualquer uma menos `main` e `release`) dispara o workflow [teste](.github/workflows/teste.yml). Ele compila o build `beta` e troca a pré-release única [`teste`](https://github.com/mindblow-org/android/releases/tag/teste) pelo APK novo, `mindblow-android-teste.apk`. Ela nunca vira "latest", então o link de download do README continua apontando para a release de verdade.
+
+O `beta` é o release com outro pacote (`app.mindblow.android.teste`) e outro nome (**mindblow teste**): instala ao lado do app normal, com link e token próprios, e fica sem atalhos. Dá para apontar ele para um servidor de teste e deixar o app de todo dia no servidor de verdade.
+
+```sh
+./gradlew assembleBeta                  # app/build/outputs/apk/beta/app-beta.apk
+```
 
 ## Licença
 
