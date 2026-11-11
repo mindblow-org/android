@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <WebView
+        android:id="@+id/web"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+
+    <ScrollView
+        android:id="@+id/setup"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:visibility="gone">
+
+        <LinearLayout style="@style/Pane">
+
+            <ImageView
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/logo" />
+
+            <TextView
+                style="@style/Head"
+                android:text="@string/app" />
+
+            <TextView
+                style="@style/Hint"
+                android:layout_marginBottom="18dp"
+                android:text="@string/setup_hint" />
+
+            <TextView
+                android:id="@+id/scan"
+                style="@style/Act.Ink"
+                android:text="@string/scan" />
+
+            <EditText
+                android:id="@+id/field"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="22dp"
+                android:autofillHints="url"
+                android:background="@drawable/field"
+                android:hint="@string/field"
+                android:imeOptions="actionGo"
+                android:importantForAutofill="no"
+                android:inputType="textUri"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:singleLine="true"
+                android:textColor="@color/fg"
+                android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/go"
+                style="@style/Act.Line"
+                android:text="@string/go" />
+
+            <TextView
+                android:id="@+id/note"
+                style="@style/Hint"
+                android:layout_marginTop="16dp"
+                android:minHeight="40dp" />
+        </LinearLayout>
+    </ScrollView>
+
+    <LinearLayout
+        android:id="@+id/down"
+        style="@style/Pane"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/logo" />
+
+        <TextView
+            style="@style/Head"
+            android:text="@string/down" />
+
+        <TextView
+            style="@style/Hint"
+            android:layout_marginBottom="18dp"
+            android:text="@string/down_hint" />
+
+        <TextView
+            android:id="@+id/retry"
+            style="@style/Act.Ink"
+            android:text="@string/retry" />
+
+        <TextView
+            android:id="@+id/change"
+            style="@style/Act.Line"
+            android:text="@string/change" />
+    </LinearLayout>
+</FrameLayout>

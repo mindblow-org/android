@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="6dp">
+
+    <ImageView
+        android:id="@+id/home"
+        style="@style/Tool"
+        android:contentDescription="@string/open"
+        android:padding="8dp"
+        android:src="@drawable/logo" />
+
+    <ImageView
+        android:id="@+id/sticky"
+        style="@style/Tool"
+        android:contentDescription="@string/new_sticky"
+        android:src="@drawable/k_sticky" />
+
+    <ImageView
+        android:id="@+id/text"
+        style="@style/Tool"
+        android:contentDescription="@string/new_text"
+        android:src="@drawable/k_text" />
+
+    <ImageView
+        android:id="@+id/todo"
+        style="@style/Tool"
+        android:contentDescription="@string/new_todo"
+        android:src="@drawable/k_todo" />
+
+    <ImageView
+        android:id="@+id/board"
+        style="@style/Tool"
+        android:contentDescription="@string/new_board"
+        android:src="@drawable/k_board" />
+</LinearLayout>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- web/public/icon.svg do mindblow. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+    <path
+        android:fillColor="@color/icon_bg"
+        android:pathData="M112,0h288a112,112 0 0 1 112,112v288a112,112 0 0 1 -112,112h-288a112,112 0 0 1 -112,-112v-288a112,112 0 0 1 112,-112z" />
+    <path
+        android:fillColor="@color/icon_fg"
+        android:pathData="M194,150h102a44,44 0 0 1 44,44v102a44,44 0 0 1 -44,44h-102a44,44 0 0 1 -44,-44v-102a44,44 0 0 1 44,-44z" />
+    <path
+        android:pathData="M244,200h102a44,44 0 0 1 44,44v102a44,44 0 0 1 -44,44h-102a44,44 0 0 1 -44,-44v-102a44,44 0 0 1 44,-44z"
+        android:strokeAlpha="0.55"
+        android:strokeColor="@color/icon_fg"
+        android:strokeWidth="20" />
+</vector>

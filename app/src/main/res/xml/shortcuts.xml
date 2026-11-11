@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:icon="@drawable/short_sticky"
+        android:shortcutId="sticky"
+        android:shortcutLongLabel="@string/new_sticky"
+        android:shortcutShortLabel="@string/sticky">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="app.mindblow.android.Main"
+            android:targetPackage="app.mindblow.android">
+            <extra
+                android:name="kind"
+                android:value="sticky" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:icon="@drawable/short_text"
+        android:shortcutId="text"
+        android:shortcutLongLabel="@string/new_text"
+        android:shortcutShortLabel="@string/text">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="app.mindblow.android.Main"
+            android:targetPackage="app.mindblow.android">
+            <extra
+                android:name="kind"
+                android:value="text" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:icon="@drawable/short_todo"
+        android:shortcutId="todo"
+        android:shortcutLongLabel="@string/new_todo"
+        android:shortcutShortLabel="@string/todo">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="app.mindblow.android.Main"
+            android:targetPackage="app.mindblow.android">
+            <extra
+                android:name="kind"
+                android:value="todo" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:icon="@drawable/short_board"
+        android:shortcutId="board"
+        android:shortcutLongLabel="@string/new_board"
+        android:shortcutShortLabel="@string/board">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="app.mindblow.android.Main"
+            android:targetPackage="app.mindblow.android">
+            <extra
+                android:name="kind"
+                android:value="board" />
+        </intent>
+    </shortcut>
+</shortcuts>
