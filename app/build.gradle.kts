@@ -40,6 +40,13 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
             signingConfig = signingConfigs.getByName(if (keystore != null) "release" else "debug")
         }
+        // Versão de teste das branches: instala ao lado do app normal, como "mindblow teste".
+        create("beta") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".teste"
+            versionNameSuffix = "-teste"
+            matchingFallbacks += "release"
+        }
     }
 
     buildFeatures {
