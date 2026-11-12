@@ -199,7 +199,7 @@ class Main : Activity() {
     private inner class Bridge {
         /** Lê o QR de outro mindblow; o link volta para a interface, que liga o sync. */
         @JavascriptInterface
-        fun scan() = runOnUiThread(::scan)
+        fun scan() = runOnUiThread(this@Main::scan)
     }
 
     private fun scan() {
