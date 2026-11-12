@@ -8,12 +8,12 @@
 
 <p align="center"><a href="https://mindblow-org.github.io/site/">Site</a> · <a href="https://github.com/mindblow-org/android/releases/latest/download/mindblow-android.apk">Baixar o APK</a></p>
 
-> [!WARNING]
-> **Ainda não testado no celular.** O servidor dentro do app (`libmindblow.so`) e o sync foram testados no PC, mas esta versão do app ainda precisa ser validada num aparelho de verdade, com o cabo plugado: abrir sem internet, criar notas, ler o QR do PC, ver as notas irem e voltarem, compartilhar de outro app e o widget. Veja [Testar no aparelho](#testar-no-aparelho).
+> [!NOTE]
+> Testado num Moto G24 (Android 14): abrir sem internet, criar notas, ler o QR do PC, as notas irem e voltarem e o que foi escrito sem rede subir quando ela volta, com o app aberto ou fechado. Compartilhar de outro app e o widget ainda não foram testados no aparelho. Veja [Testar no aparelho](#testar-no-aparelho).
 
 O app leva o mindblow inteiro junto: o mesmo servidor do desktop, compilado para Android, roda dentro dele com o banco no próprio celular. A WebView abre a interface que esse servidor entrega, então estilo e comportamento são os do navegador, e tudo funciona sem internet. O que o Android ganha fica em volta:
 
-- **Sync com outros aparelhos** (opcional): toque no QR do canto de cima, em "ler QR", e leia o QR do mindblow do PC (ou cole o link). Daí em diante, o que muda aqui vai para lá e o que muda lá vem para cá, sempre que o outro aparelho responder. Sem rede, as mudanças esperam.
+- **Sync com outros aparelhos** (opcional): toque no QR do canto de cima, em "ler QR", e leia o QR do mindblow do PC (ou cole o link). Daí em diante, o que muda aqui vai para lá e o que muda lá vem para cá, sempre que o outro aparelho responder. Sem rede, as mudanças esperam e sobem sozinhas quando ela volta, mesmo com o app fechado.
 - **Compartilhar**: texto e imagens de outros apps viram nota. Texto curto vira sticky; com assunto (o título da página, no navegador), mais de 500 caracteres ou várias imagens, vira texto. As imagens são reduzidas como na web: lado maior de até 2048px, em WebP.
 - **Escanear caderno**: o "Escanear caderno" do mindblow abre o scanner de documento do Google, que acha a folha, corta, endireita e aceita até 10 páginas. As páginas viram um board.
 - **Atalhos**: segure o ícone para criar uma sticky, um texto, um todo ou um board.
@@ -37,13 +37,16 @@ app/src/main/java/app/mindblow/android/
   Share.kt    recebe o "compartilhar" e salva no servidor daqui
   Pic.kt      reduz a imagem antes de enviar (igual a web/src/lib/images/shrink.ts)
   Server.kt   chamadas à API do servidor daqui
+  Sync.kt     job que sobe o que ficou só aqui quando a rede volta, e o aviso de rede nova
   Widget.kt   barra da tela inicial
 ```
 
 - `libmindblow.so` é o crate `mobile` do [mindblow](https://github.com/mindblow-org/desktop): o servidor inteiro, com a interface embutida, e uma função JNI só (`Node.start`). O app passa banco, porta e token por variáveis de ambiente (`Os.setenv`), como o serviço do PC.
 - O servidor escuta em `127.0.0.1:7341`, e o banco fica em `files/mindblow.db`. A porta é fixa porque o `localStorage` da WebView (abas, nome do aparelho) é por endereço.
 - `127.0.0.1` é o mesmo para todos os apps do celular, então a API exige um token aleatório, criado na instalação. A WebView entra com ele no `#token=` do link, e o compartilhar usa o mesmo.
-- O sync é do servidor: ele puxa e empurra as mudanças de cada link e troca as imagens que faltam. Mudança aqui ou lá acorda o sync; sem resposta, ele tenta de novo com espera crescente. Enquanto o app está vivo, o sync roda; fechado, ele recomeça na próxima vez que o app abrir.
+- O sync é do servidor: ele puxa e empurra as mudanças de cada link e troca as imagens que faltam. Mudança aqui ou lá acorda o sync; sem resposta, ele tenta de novo com espera crescente.
+- Rede voltando: enquanto o processo vive, o `Sync.watch` ouve a rede e chama `POST /api/sync/now`, que reconecta cada link na hora, sem esperar a próxima tentativa. Ao ir para o fundo, o `Main` agenda o job `Sync` (`JobScheduler`, persistido), que o sistema roda quando há rede: ele sobe o servidor se o processo morreu, chama o `now` e espera cada link sincronizar, por até 90 s; se não der, o sistema tenta de novo mais tarde.
+- A VPN do Tailscale continua de pé e "validada" no modo avião, só sem transporte embaixo. Por isso o job pede rede com Wi-Fi, celular ou cabo, e aceita a VPN por cima; pedir só "qualquer rede" faria o job rodar à toa no modo avião. Com o Tailscale desligado, o job roda, não alcança o PC e fica para depois.
 - A interface pede para ler um QR por `window.mindblowAndroid.scan()`, e o app devolve o link em `window.mindblowLink(url)`. O leitor é o do Google Play Services, que não pede permissão de câmera.
 - Quando a página pede câmera (`<input capture>`), o `Main` abre o scanner de documento em vez do seletor de arquivo e devolve as páginas como arquivos. Sem o Google Play Services, cai no seletor.
 - Atalhos, widget e compartilhar chegam ao `Main` como extra e viram hash na URL: `#new=<tipo>` cria e abre uma nota, `#open=<id>` abre uma. Quem trata é a interface (`web/src/view/Main.svelte` no mindblow).
@@ -76,10 +79,11 @@ Com o celular plugado (`adb devices`) e o mindblow com sync rodando no PC:
 2. Crie uma nota de cada tipo, com imagem, ainda sem rede. Feche e abra: elas continuam lá.
 3. Desligue o modo avião, ligue o Tailscale, toque no QR, em "ler QR", e leia o QR do mindblow do PC. O link aparece "em dia" e as notas vão para o PC (com as imagens).
 4. Edite a mesma nota no PC e no celular, uma em cada campo, e confira que as duas edições ficam nos dois lados. Exclua uma no PC e veja ela sumir do celular.
-5. Compartilhe um texto e uma foto de outro app, use os atalhos do ícone e o widget, com e sem rede.
-6. Quem já tinha o app conectado ao PC: instale por cima (`adb install -r`) e veja o link antigo virar o sync, com as notas descendo.
+5. Ligue o modo avião, escreva uma nota, vá para a tela inicial e abra outros dois apps (para o processo do mindblow ir para o cache). `adb shell am kill <pacote>` e confira com `pidof` que ele morreu. Desligue o modo avião: a nota chega no PC em segundos sem abrir o app, e `dumpsys jobscheduler` mostra o `Sync` rodando e terminando.
+6. Compartilhe um texto e uma foto de outro app, use os atalhos do ícone e o widget, com e sem rede.
+7. Quem já tinha o app conectado ao PC: instale por cima (`adb install -r`) e veja o link antigo virar o sync, com as notas descendo.
 
-Em aparelho MediaTek (como o Moto G24), não abra o app com `am start` logo depois de um `am force-stop`: o DuraSpeed deixa a WebView em branco. Abra pelo ícone.
+Em aparelho MediaTek (como o Moto G24), não abra o app com `am start` logo depois de um `am force-stop`: o DuraSpeed deixa a WebView em branco. Abra pelo ícone. O `force-stop` também cancela o job do sync; para testar com o app morto, use `am kill`.
 
 ## Release
 

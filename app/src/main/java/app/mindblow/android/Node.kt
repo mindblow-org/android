@@ -35,6 +35,7 @@ object Node {
             System.loadLibrary("mindblow")
             start() == PORT
         }.getOrDefault(false)
+        if (up) Sync.watch(c.applicationContext)
         return up
     }
 
