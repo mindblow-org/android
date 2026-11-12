@@ -47,6 +47,8 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
             signingConfig = signingConfigs.getByName(if (keystore != null) "release" else "debug")
+            // Celular é arm64; o x86_64 (5 MB do servidor) só serve no emulador, com o debug.
+            ndk { abiFilters += "arm64-v8a" }
         }
         // Teste do servidor junto e do sync: instala ao lado do app normal, como "mindblow offline".
         create("offline") {

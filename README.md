@@ -41,7 +41,7 @@ app/src/main/java/app/mindblow/android/
   Widget.kt   barra da tela inicial
 ```
 
-- `libmindblow.so` é o crate `mobile` do [mindblow](https://github.com/mindblow-org/desktop): o servidor inteiro, com a interface embutida, e uma função JNI só (`Node.start`). O app passa banco, porta e token por variáveis de ambiente (`Os.setenv`), como o serviço do PC.
+- `libmindblow.so` é o crate `mobile` do [mindblow](https://github.com/mindblow-org/desktop): o servidor inteiro, com a interface embutida, e uma função JNI só (`Node.start`). O app passa banco, porta e token por variáveis de ambiente (`Os.setenv`), como o serviço do PC. O release (e o beta e o offline) leva só a de arm64, que é a dos celulares: o APK cai de 11 MB para 6 MB. A de x86_64 vai só no debug, para o emulador.
 - O servidor escuta em `127.0.0.1:7341`, e o banco fica em `files/mindblow.db`. A porta é fixa porque o `localStorage` da WebView (abas, nome do aparelho) é por endereço.
 - `127.0.0.1` é o mesmo para todos os apps do celular, então a API exige um token aleatório, criado na instalação. A WebView entra com ele no `#token=` do link, e o compartilhar usa o mesmo.
 - O sync é do servidor: ele puxa e empurra as mudanças de cada link e troca as imagens que faltam. Mudança aqui ou lá acorda o sync; sem resposta, ele tenta de novo com espera crescente.
@@ -69,7 +69,7 @@ cargo install cargo-ndk
 MINDBLOW_SKIP_NODE=1 ./gradlew assembleDebug   # só o Kotlin, sem o servidor (o APK não abre)
 ```
 
-No emulador, o PC é `10.0.2.2`. Para sincronizar com um mindblow rodando nele, suba o servidor com `MINDBLOW_HOSTS=10.0.2.2` e ligue o link `http://10.0.2.2:7341` no app.
+No emulador, use o debug (`./gradlew installDebug`), o único com o servidor para x86_64. Lá, o PC é `10.0.2.2`. Para sincronizar com um mindblow rodando nele, suba o servidor com `MINDBLOW_HOSTS=10.0.2.2` e ligue o link `http://10.0.2.2:7341` no app.
 
 ## Testar no aparelho
 
