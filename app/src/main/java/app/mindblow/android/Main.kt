@@ -61,6 +61,12 @@ class Main : Activity() {
         hash(intent)?.let(::open)
     }
 
+    /** Fechou ou foi para o fundo: o que ficou só aqui sobe quando houver rede, mesmo com o app fechado. */
+    override fun onStop() {
+        super.onStop()
+        Sync.plan(this)
+    }
+
     @Deprecated("Deprecated in Java")
     @Suppress("DEPRECATION")
     override fun onBackPressed() {
